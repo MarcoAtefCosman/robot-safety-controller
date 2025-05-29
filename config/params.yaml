@@ -1,10 +1,11 @@
-safety:
-  battery:
-    low_threshold : 30.0
-    max_voltage : 100.0
-    min_voltage : 0.0
-  collision:
-    warning_distance : 0.5
-    stop_distance : 0.25
-  recovery:
-    rotation_speed : 0.5
+safety_controller:
+  ros__parameters:
+    battery:
+      low_threshold: 30.0
+      max_voltage: 100.0
+      min_voltage: 0.0
+    collision:
+      stop_distance: 0.4
+      clearance_distance: 0.6
+    recovery:
+      rotation_speed: 0.5
