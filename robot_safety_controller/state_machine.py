@@ -10,7 +10,13 @@ class MonitorBatteryAndCollision(smach.State):
     def __init__(self, node):
         smach.State.__init__(self, outcomes=['low_battery', 'collision_detected', 'normal'])
         self.node = node
-        self.battery_level = 100.0
+        
+        self.battery_level =  node.get_parameter('battery.max_voltage').value
+        self.min_battery_level = node.get_parameter('battery.min_voltage').value
+        self.low_battery_threshold = node.get_parameter('battery.low_threshold').value
+        
+        self.stop_distance = node.get_parameter('collision.stop_distance').value
+        
         self.collision_detected = False
         
         # Create subscribers with callback groups
@@ -34,7 +40,7 @@ class MonitorBatteryAndCollision(smach.State):
             return
             
         min_distance = min(msg.ranges)
-        self.collision_detected = min_distance < 0.25
+        self.collision_detected = min_distance < self.stop_distance
         self.node.get_logger().info(f"Scan update: {min_distance:.2f}m")
 
     def execute(self, userdata):
@@ -50,7 +56,7 @@ class MonitorBatteryAndCollision(smach.State):
                 if self.collision_detected:
                     self.node.get_logger().error("COLLISION DETECTED!")
                     return 'collision_detected'
-                elif self.battery_level < 30.0:
+                elif self.battery_level < self.low_battery_threshold:
                     self.node.get_logger().error("LOW BATTERY!")
                     return 'low_battery'
         finally:
@@ -62,7 +68,11 @@ class RotateBase(smach.State):
     def __init__(self, node):
         smach.State.__init__(self, outcomes=['battery_ok'])
         self.node = node
-        self.battery_level = 100.0
+
+        self.battery_level = node.get_parameter('battery.max_voltage').value
+        self.low_battery_threshold = node.get_parameter('battery.low_threshold').value
+        self.rotation_speed = node.get_parameter('recovery.rotation_speed').value
+
         self.cmd_vel_pub = node.create_publisher(Twist, '/cmd_vel', 10)
         
         self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
@@ -79,7 +89,7 @@ class RotateBase(smach.State):
     def execute(self, userdata):
         self.node.get_logger().info("Starting rotation...")
         rotate_msg = Twist()
-        rotate_msg.angular.z = 0.5
+        rotate_msg.angular.z = self.rotation_speed
         
         # Create executor for this state
         executor = rclpy.executors.MultiThreadedExecutor()
@@ -90,7 +100,7 @@ class RotateBase(smach.State):
                 executor.spin_once(timeout_sec=0.1)
                 self.cmd_vel_pub.publish(rotate_msg)
                 
-                if self.battery_level >= 30.0:
+                if self.battery_level >= self.low_battery_threshold:
                     stop_msg = Twist()
                     self.cmd_vel_pub.publish(stop_msg)
                     self.node.get_logger().info("Battery recovered, stopping rotation")
@@ -105,13 +115,16 @@ class StopMotion(smach.State):
     def __init__(self, node):
         smach.State.__init__(self, outcomes=['manually_cleared'])
         self.node = node
+
+        self.clearance_distance = node.get_parameter('collision.clearance_distance').value
         self.cmd_vel_pub = node.create_publisher(Twist, '/cmd_vel', 10)
-        
+        self.collision_cleared = False
+
         self.callback_group = rclpy.callback_groups.ReentrantCallbackGroup()
         self.scan_sub = node.create_subscription(
             LaserScan, '/scan', self.scan_cb, 10,
             callback_group=self.callback_group)
-        self.collision_cleared = False
+        
         
         self.node.get_logger().info("Stop state initialized")
 
@@ -121,7 +134,7 @@ class StopMotion(smach.State):
             return
             
         min_distance = min(msg.ranges)
-        self.collision_cleared = min_distance > 0.5
+        self.collision_cleared = min_distance > self.clearance_distance
         self.node.get_logger().info(f"Scan update: {min_distance:.2f}m")
 
     def execute(self, userdata):
@@ -145,7 +158,10 @@ class StopMotion(smach.State):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Node('robot_safety_controller')
+    node = Node(
+    'safety_controller',
+    automatically_declare_parameters_from_overrides=True
+    )
     node.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
     
     # Create state machine
