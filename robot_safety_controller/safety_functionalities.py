@@ -14,6 +14,8 @@ class Rotate(pt.behaviour.Behaviour):
     def setup(self, **kwargs):
         self.node = kwargs['node']
         self.cmd_pub = self.node.create_publisher(Twist, '/cmd_vel', 10)
+        self.rotation_speed = self.node.get_parameter('recovery.rotation_speed').value
+
         return True
 
     def update(self):
@@ -21,7 +23,7 @@ class Rotate(pt.behaviour.Behaviour):
         self.node.get_logger().info(f"[Rotate] /battery_low = {low}")
         if low:
             msg = Twist()
-            msg.angular.z = 0.5
+            msg.angular.z = self.rotation_speed
             self.cmd_pub.publish(msg)
             return pt.common.Status.RUNNING
         return pt.common.Status.SUCCESS
@@ -56,18 +58,19 @@ class BatteryMonitor(pt.behaviour.Behaviour):
     def __init__(self, name):
         super().__init__(name)
         self.blackboard = Blackboard()
-        self.threshold = 30.0
         self.subscription = None
 
     def setup(self, **kwargs):
         self.node = kwargs['node']
+        
+        self.low_battery_threshold = self.node.get_parameter('battery.low_threshold').value
         self.subscription = self.node.create_subscription(
             Float32, '/battery_voltage', self.callback, 10
         )
         return True
 
     def callback(self, msg):
-        low = msg.data < self.threshold
+        low = msg.data < self.low_battery_threshold
         self.blackboard.set("/battery_voltage", msg.data)
         self.blackboard.set("/battery_low", low)
         self.node.get_logger().info(f"[BatteryMonitor] /battery_voltage = {msg.data:.2f} | /battery_low = {low}")
@@ -80,10 +83,11 @@ class LaserMonitor(pt.behaviour.Behaviour):
         super().__init__(name)
         self.blackboard = Blackboard()
         self.subscription = None
-        self.safe_distance = 0.25
 
     def setup(self, **kwargs):
         self.node = kwargs['node']
+        self.stop_distance = self.node.get_parameter('collision.stop_distance').value
+
         self.subscription = self.node.create_subscription(
             LaserScan,
             '/scan',
@@ -101,7 +105,7 @@ class LaserMonitor(pt.behaviour.Behaviour):
             valid_ranges = [r for r in msg.ranges if 0.1 < r < 10.0]
             if valid_ranges:
                 min_dist = min(valid_ranges)
-                detected = min_dist < self.safe_distance
+                detected = min_dist < self.stop_distance
                 self.blackboard.set("/collision_detected", detected)
                 self.node.get_logger().info(f"[LaserMonitor] dist = {min_dist:.2f} | /collision_detected = {detected}")
         except Exception as e:
