@@ -65,13 +65,17 @@ def spin_node(node):
 
 def main():
     rclpy.init()
+    node = rclpy.create_node(
+        'safety_controller',
+        automatically_declare_parameters_from_overrides=True
+    )
     root = create_root()
     tree = ptr.trees.BehaviourTree(root=root)
 
     spin_thread = threading.Thread(target=spin_node, args=(tree.node,), daemon=True)
 
     try:
-        tree.setup(timeout=30.0)
+        tree.setup(timeout=30.0, node=node)
         tree.node.get_logger().info("[Main] Behavior tree is running")
         spin_thread.start()
         tree.tick_tock(period_ms=100)
