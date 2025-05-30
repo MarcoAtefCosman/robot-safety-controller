@@ -3,7 +3,6 @@ safety_controller:
     battery:
       low_threshold: 30.0
       max_voltage: 100.0
-      min_voltage: 0.0
     collision:
       stop_distance: 0.4
       clearance_distance: 0.6

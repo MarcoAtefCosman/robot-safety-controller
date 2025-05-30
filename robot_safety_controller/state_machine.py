@@ -12,7 +12,6 @@ class MonitorBatteryAndCollision(smach.State):
         self.node = node
         
         self.battery_level =  node.get_parameter('battery.max_voltage').value
-        self.min_battery_level = node.get_parameter('battery.min_voltage').value
         self.low_battery_threshold = node.get_parameter('battery.low_threshold').value
         
         self.stop_distance = node.get_parameter('collision.stop_distance').value
@@ -59,10 +58,10 @@ class MonitorBatteryAndCollision(smach.State):
                 elif self.battery_level < self.low_battery_threshold:
                     self.node.get_logger().error("LOW BATTERY!")
                     return 'low_battery'
+                return 'normal'
         finally:
             executor.remove_node(self.node)
         
-        return 'normal'
 
 class RotateBase(smach.State):
     def __init__(self, node):

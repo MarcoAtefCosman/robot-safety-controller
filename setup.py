@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'), ['config/params.yaml']),
+        (os.path.join('share', package_name, 'test'), glob('test/test_*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -21,12 +22,12 @@ setup(
     maintainer_email='marcoatefcosmangadallah@gmail.com',
     description='Robot safety controller with state machine and behavior tree implementations',
     license='Apache License 2.0',
-    tests_require=['pytest'],
+    tests_require=['unittest'],  
+    test_suite='test',
     entry_points={
         'console_scripts': [
             'state_machine = robot_safety_controller.state_machine:main',
             'behavior_tree = robot_safety_controller.behavior_tree:main',
         ],
     },
-
 )
