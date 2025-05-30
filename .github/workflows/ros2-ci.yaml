@@ -15,22 +15,17 @@ jobs:
       options: --user root
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Install dependencies
         run: |
           apt-get update
           apt-get install -y python3-colcon-common-extensions python3-pip
           pip install -U setuptools
 
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
       - name: Build workspace
-        run: |
-          source /opt/ros/humble/setup.bash
-          colcon build --packages-select robot_safety_controller
+        run: bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select robot_safety_controller"
 
-      - name: Run tests
-        run: |
-          source /opt/ros/humble/setup.bash
-          colcon test --packages-select robot_safety_controller
-          colcon test-result --verbose
+      - name: Run unit tests
+        run: bash -c "source /opt/ros/humble/setup.bash && colcon test --packages-select robot_safety_controller && colcon test-result --verbose"
