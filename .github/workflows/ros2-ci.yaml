@@ -1,28 +1,28 @@
-name: ROS 2 Python CI
+name: ROS 2 CI (Humble)
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    container:
+      image: ros:humble
+      options: --user root
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up ROS 2 Humble
-        uses: ros-tooling/setup-ros@v0.7
-        with:
-          required-ros-distributions: humble
-
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y python3-colcon-common-extensions
+          apt-get update
+          apt-get install -y python3-colcon-common-extensions python3-pip
+          pip install -U setuptools
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Build workspace
         run: |
