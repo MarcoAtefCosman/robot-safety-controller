@@ -18,13 +18,27 @@ jobs:
         with:
           required-ros-distributions: humble
 
-      - name: Install ROS 2 build tools
-        run: sudo apt-get update && sudo apt-get install -y python3-colcon-common-extensions
+      - name: Install required system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-colcon-common-extensions \
+            python3-pytest \
+            ros-humble-smach \
+            ros-humble-geometry-msgs \
+            ros-humble-sensor-msgs \
+            ros-humble-std-msgs
 
       - name: Downgrade setuptools to avoid canonicalize_version error
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install "setuptools<69"
+
+      - name: Install ROS 2 Python dependencies using rosdep
+        run: |
+          sudo rosdep init || true
+          rosdep update
+          rosdep install --from-paths . --ignore-src -r -y
 
       - name: Build the package
         run: |
