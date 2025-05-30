@@ -4,7 +4,6 @@ import py_trees_ros as ptr
 from py_trees.behaviours import Failure
 from py_trees.blackboard import Blackboard
 import threading
-
 from robot_safety_controller.safety_functionalities import (
     BatteryMonitor, LaserMonitor, Rotate, StopMotion
 )
