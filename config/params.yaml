@@ -6,5 +6,8 @@ safety_controller:
     collision:
       stop_distance: 0.4
       clearance_distance: 0.6
+    cpu:
+      max_temperature_threshold : 60.0
+      normal_temperature_threshold : 20.0
     recovery:
       rotation_speed: 0.5
