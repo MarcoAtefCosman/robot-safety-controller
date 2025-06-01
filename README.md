@@ -1,3 +1,3 @@
 # testing-and-quality-assurance
 
-## State Machine implementation
+## State Machine and behaviour tree implementation

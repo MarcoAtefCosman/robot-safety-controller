@@ -5,7 +5,7 @@ from py_trees.behaviours import Failure
 from py_trees.blackboard import Blackboard
 import threading
 from robot_safety_controller.safety_functionalities import (
-    BatteryMonitor, LaserMonitor, Rotate, StopMotion
+    BatteryMonitor, CPUMonitor, LaserMonitor, RotateBattery, RotateCPU, StopMotion
 )
 
 class LogCondition(pt.behaviour.Behaviour):
@@ -30,7 +30,8 @@ def create_root():
     monitors = pt.composites.Parallel(name="Topics2BB", policy=pt.common.ParallelPolicy.SuccessOnAll())
     monitors.add_children([
         BatteryMonitor("Battery2BB"),
-        LaserMonitor("Scan2BB")
+        LaserMonitor("Scan2BB"),
+        CPUMonitor("CPU2BB")
     ])
 
     # === Priority Safety Logic ===
@@ -42,17 +43,24 @@ def create_root():
     stop_platform = StopMotion("Stop Platform")
     collision_check.add_children([is_colliding, stop_platform])
 
+    # --- CPU Emergency Handling ---
+    cpu_check = pt.composites.Sequence(name="CPU Emergency", memory=False)
+    is_cpu_temperature_high = LogCondition("CPU Temperature High?", "/temperature_high", True)
+    rotate_cpu_platform = RotateCPU("Rotate CPU Platform")
+    cpu_check.add_children([is_cpu_temperature_high, rotate_cpu_platform])
+
     # --- Battery Emergency Handling ---
     battery_check = pt.composites.Sequence(name="Battery Emergency", memory=False)
     is_battery_low = LogCondition("Battery Low?", "/battery_low", True)
-    rotate_platform = Rotate("Rotate Platform")
-    battery_check.add_children([is_battery_low, rotate_platform])
+    rotate_battery_platform = RotateBattery("Rotate Battery Platform")
+    battery_check.add_children([is_battery_low, rotate_battery_platform])
 
     # --- Idle fallback
     idle = Failure(name="Idle")
 
     priorities.add_children([
         collision_check,
+        cpu_check,
         battery_check,
         idle
     ])
@@ -60,8 +68,6 @@ def create_root():
     root.add_children([monitors, priorities])
     return root
 
-def spin_node(node):
-    rclpy.spin(node)
 
 def main():
     rclpy.init()
@@ -71,15 +77,13 @@ def main():
     )
     root = create_root()
     tree = ptr.trees.BehaviourTree(root=root)
-
-    spin_thread = threading.Thread(target=spin_node, args=(tree.node,), daemon=True)
+    tree.setup(timeout=30.0, node=node)
 
     try:
-        tree.setup(timeout=30.0, node=node)
         tree.node.get_logger().info("[Main] Behavior tree is running")
-        spin_thread.start()
         tree.tick_tock(period_ms=100)
         rclpy.spin(tree.node)
+
     except KeyboardInterrupt:
         pass
     finally:
