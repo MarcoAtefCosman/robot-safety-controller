@@ -65,4 +65,3 @@ jobs:
         run: |
           source /opt/ros/humble/setup.bash
           colcon test --packages-select robot_safety_controller
-          colcon test-result --verbose
