@@ -9,6 +9,7 @@ on:
 jobs:
   build_and_test:
     runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -18,10 +19,13 @@ jobs:
         with:
           required-ros-distributions: humble
 
-      - name: Install required system dependencies
+      - name: Install base dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-colcon-common-extensions python3-pytest
+
+      - name: Install remaining dependencies with rosdep
+        run: |
           sudo rosdep init || true
           rosdep update
           rosdep install --from-paths . --ignore-src -r -y
@@ -30,12 +34,6 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install "setuptools<69"
-
-      - name: Install ROS 2 Python dependencies using rosdep
-        run: |
-          sudo rosdep init || true
-          rosdep update
-          rosdep install --from-paths . --ignore-src -r -y
 
       - name: Build the package
         run: |
@@ -46,3 +44,8 @@ jobs:
         run: |
           source /opt/ros/humble/setup.bash
           colcon test --packages-select robot_safety_controller
+
+      - name: Show test results
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon test-result --verbose
