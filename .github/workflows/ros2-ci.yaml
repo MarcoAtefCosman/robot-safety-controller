@@ -14,19 +14,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Check disk space
-        run: df -h
-
       - name: Set up ROS 2
-        uses: ros-tooling/setup-ros@v0.8
+        uses: ros-tooling/setup-ros@v0.7
         with:
           required-ros-distributions: humble
 
       - name: Install system dependencies
         run: |
+          # Retry mechanism for apt updates
           for i in {1..5}; do
             sudo apt-get update && break || sleep 15
           done
+          
           sudo apt-get install -y \
             python3-colcon-common-extensions \
             python3-pytest \
